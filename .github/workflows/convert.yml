@@ -1,0 +1,22 @@
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: build
+        run: |
+          curl -L https://7-zip.org/a/7z2501-linux-x64.tar.xz | tar -xJf -
+          sudo cp 7zzs /bin/7z
+          bash convert.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          path: minecraft-textures.7z
+      - uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: minecraft-textures.7z
+          tag: 1.21.8
