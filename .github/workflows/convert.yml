@@ -1,22 +1,46 @@
 on:
   workflow_dispatch: {}
+  push: {}
 permissions:
   contents: write
 jobs:
-  build:
+  convert:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: minecraft-vanilla
+            url: https://piston-data.mojang.com/v1/objects/a19d9badbea944a4369fd0059e53bf7286597576/client.jar
+          - name: faithful
+            url: https://cdn.modrinth.com/data/r4GILswZ/versions/5T6GekBK/Faithful%2064x%20-%20Release%2010.zip
     steps:
       - uses: actions/checkout@v4
       - name: build
         run: |
           curl -L https://7-zip.org/a/7z2501-linux-x64.tar.xz | tar -xJf -
           sudo cp 7zzs /bin/7z
+          sudo curl -L https://codeberg.org/ostech/craft_to_clonia_textures/releases/download/4aug25/CTCloniaTextures-linux-amd64-04Aug25 -o /bin/c2c
+          sudo chmod +x /bin/c2c
           bash convert.sh
+        env:
+          name: ${{ matrix.name }}
+          url: ${{ matrix.url }}
       - uses: actions/upload-artifact@v4
         with:
-          path: minecraft-textures.7z
+          path: ${{ matrix.name }}.7z
+          name: ${{ matrix.name }}
+  publish_release:
+    name: publish release
+    needs: convert
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: upload
       - uses: svenstaro/upload-release-action@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: minecraft-textures.7z
           tag: 1.21.8
+          file: upload/*.7z
+          file_glob: true
+          overwrite: true
